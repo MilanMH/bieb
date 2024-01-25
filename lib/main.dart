@@ -3,7 +3,7 @@ import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const ipurl = 'http://10.0.2.10:3000';
+const ipurl = 'http://10.0.1.68:3000';
 
 void main() => runApp(const MyApp());
 
@@ -70,7 +70,7 @@ class _ScannerPageState extends State<ScannerPage> {
   String _bookAuthor = '';
   String _bookDescription = '';
   String _bookPages = '';
-  String _bookQuantity = ''; // Variable for book quantity
+  String _bookQuantity = '1'; // Variable for book quantity
 
   Future<void> scanBarcodeNormal() async {
     String barcodeScanRes;
@@ -113,7 +113,7 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   Future<void> addBookToDatabase() async {
-    final url = Uri.parse(ipurl + '/add_book'); // Adjust this to your server URL
+    final url = Uri.parse('$ipurl/add_book'); // Adjust this to your server URL
     final headers = {"Content-Type": "application/json"};
     final bookJson = json.encode({
       'isbn': _scanBarcode,
@@ -153,18 +153,19 @@ class _ScannerPageState extends State<ScannerPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text('Scan result: $_scanBarcode\n',
-                style: Theme.of(context).textTheme.headline6),
+                style: Theme.of(context).textTheme.titleLarge),
             Text('Title: $_bookTitle\n',
-                style: Theme.of(context).textTheme.headline6),
+                style: Theme.of(context).textTheme.titleLarge),
             Text('Author: $_bookAuthor\n', // Display the author
-                style: Theme.of(context).textTheme.bodyText2),
+                style: Theme.of(context).textTheme.bodyMedium),
             Text('Description: $_bookDescription\n',
-                style: Theme.of(context).textTheme.bodyText2),
+                style: Theme.of(context).textTheme.bodyMedium),
             Text('Pages: $_bookPages\n',
-                style: Theme.of(context).textTheme.bodyText2),
+                style: Theme.of(context).textTheme.bodyMedium),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
+                controller: TextEditingController(text: _bookQuantity),
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Aantal',
@@ -210,7 +211,7 @@ class _BooksListPageState extends State<BooksListPage> {
   }
 
   Future<void> fetchBooks() async {
-    final url = Uri.parse(ipurl + '/get_books');
+    final url = Uri.parse('$ipurl/get_books');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -358,7 +359,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   }
 
   void _updateAvailability(int newAvailability) async {
-    final url = Uri.parse(ipurl + '/update_availability');
+    final url = Uri.parse('$ipurl/update_availability');
     final headers = {"Content-Type": "application/json"};
     final body = json.encode({
       'id': widget.book['id'],
