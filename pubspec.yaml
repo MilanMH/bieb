@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
   flutter_barcode_scanner: ^2.0.0
   http: ^0.13.3
+  image_picker: ^0.8.4+4
+
 
 
 

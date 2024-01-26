@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 
-const ipurl = 'http://10.0.2.10:3000';
+const ipurl = 'http://10.0.0.193:3000';
 
 void main() => runApp(const MyApp());
 
@@ -70,7 +73,8 @@ class _ScannerPageState extends State<ScannerPage> {
   String _bookAuthor = '';
   String _bookDescription = '';
   String _bookPages = '';
-  String _bookQuantity = ''; // Variable for book quantity
+  String _bookQuantity = '';
+  File? _image;
 
   Future<void> scanBarcodeNormal() async {
     String barcodeScanRes;
@@ -84,6 +88,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
       if (barcodeScanRes != '-1') {
         fetchBookData(barcodeScanRes);
+        await _takePicture();
       }
     } on Exception {
       barcodeScanRes = 'Failed to get barcode.';
@@ -112,20 +117,36 @@ class _ScannerPageState extends State<ScannerPage> {
     }
   }
 
+  Future<void> _takePicture() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
   Future<void> addBookToDatabase() async {
-    final url = Uri.parse(ipurl + '/add_book'); // Adjust this to your server URL
-    final headers = {"Content-Type": "application/json"};
-    final bookJson = json.encode({
-      'isbn': _scanBarcode,
-      'title': _bookTitle,
-      'author': _bookAuthor,
-      'description': _bookDescription,
-      'pages': _bookPages,
-      'quantity': _bookQuantity // Add the quantity to the data
-    });
+    var uri = Uri.parse(ipurl + '/add_book');
+    var request = http.MultipartRequest('POST', uri)
+      ..fields['isbn'] = _scanBarcode
+      ..fields['title'] = _bookTitle
+      ..fields['author'] = _bookAuthor
+      ..fields['description'] = _bookDescription
+      ..fields['pages'] = _bookPages
+      ..fields['quantity'] = _bookQuantity;
+    if (_image != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'image_path',
+        _image!.path,
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    }
 
     try {
-      final response = await http.post(url, headers: headers, body: bookJson);
+      final response = await request.send();
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Book added to database"),
@@ -152,16 +173,17 @@ class _ScannerPageState extends State<ScannerPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('Scan result: $_scanBarcode\n',
-                style: Theme.of(context).textTheme.headline6),
-            Text('Title: $_bookTitle\n',
-                style: Theme.of(context).textTheme.headline6),
-            Text('Author: $_bookAuthor\n', // Display the author
-                style: Theme.of(context).textTheme.bodyText2),
-            Text('Description: $_bookDescription\n',
-                style: Theme.of(context).textTheme.bodyText2),
-            Text('Pages: $_bookPages\n',
-                style: Theme.of(context).textTheme.bodyText2),
+            Text('Scan result: $_scanBarcode\n', style: Theme.of(context).textTheme.headline6),
+            Text('Title: $_bookTitle\n', style: Theme.of(context).textTheme.headline6),
+            Text('Author: $_bookAuthor\n', style: Theme.of(context).textTheme.bodyText2),
+            Text('Description: $_bookDescription\n', style: Theme.of(context).textTheme.bodyText2),
+            Text('Pages: $_bookPages\n', style: Theme.of(context).textTheme.bodyText2),
+            if (_image != null)
+              Container(
+                width: 100.0,  // Breedte van de afbeelding
+                height: 150.0, // Hoogte van de afbeelding
+                child: Image.file(_image!, fit: BoxFit.cover),
+              ),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
@@ -349,82 +371,119 @@ class BookDetailsPage extends StatefulWidget {
 }
 
 class _BookDetailsPageState extends State<BookDetailsPage> {
-  int availability = 0;
+  late int availability;
 
   @override
   void initState() {
     super.initState();
-    availability = widget.book['availability'];
+    availability = widget.book['availability'] ?? 0;
   }
 
-  void _updateAvailability(int newAvailability) async {
+  Future<void> _updateAvailability(int newAvailability) async {
     final url = Uri.parse(ipurl + '/update_availability');
-    final headers = {"Content-Type": "application/json"};
-    final body = json.encode({
-      'id': widget.book['id'],
-      'availability': newAvailability,
-    });
+    final response = await http.post(url,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({
+          'id': widget.book['id'],
+          'availability': newAvailability,
+        }));
 
-    try {
-      final response = await http.post(url, headers: headers, body: body);
+    if (response.statusCode == 200) {
+      setState(() {
+        availability = newAvailability;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Beschikbaarheid bijgewerkt')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fout bij het bijwerken van de beschikbaarheid')));
+    }
+  }
+
+  Future<void> _deleteBook() async {
+    final confirmation = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Boek verwijderen'),
+          content: const Text('Weet je zeker dat je dit boek wilt verwijderen?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Annuleren'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text('Verwijderen'),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmation == true) {
+      final url = Uri.parse(ipurl + '/delete_book/${widget.book['id']}');
+      final response = await http.delete(url);
+
       if (response.statusCode == 200) {
-        setState(() {
-          availability = newAvailability;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Boek succesvol verwijderd')));
+        Navigator.of(context).pop(); // Ga terug naar de vorige pagina
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Failed to update availability"),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fout bij het verwijderen van het boek')));
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Exception: $e"),
-      ));
-    }
-  }
-
-  void _increaseAvailability() {
-    if (availability < widget.book['quantity']) {
-      _updateAvailability(availability + 1);
-    }
-  }
-
-  void _decreaseAvailability() {
-    if (availability > 0) {
-      _updateAvailability(availability - 1);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final String imageUrl = ipurl + '/' + (widget.book['image_path'] ?? '').replaceAll('uploads/', '');
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.book['title']),
+        title: Text(widget.book['title'] ?? 'Boek Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _deleteBook,
+          ),
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text('Title: ${widget.book['title']}'),
-            Text('Author: ${widget.book['author']}'),
-            Text('Description: ${widget.book['description']}'),
-            Text('Pages: ${widget.book['pages']}'),
-            Text('Quantity: ${widget.book['quantity']}'),
-            Text('Availability: $availability'),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  onPressed: _decreaseAvailability,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _increaseAvailability,
-                ),
-              ],
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              imageUrl.isNotEmpty
+                  ? Image.network(imageUrl, fit: BoxFit.cover)
+                  : Placeholder(fallbackHeight: 200.0),
+              SizedBox(height: 20),
+              Text('ISBN: ${widget.book['isbn'] ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              SizedBox(height: 10),
+              Text('Titel: ${widget.book['title'] ?? 'N/A'}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10),
+              Text('Auteur: ${widget.book['author'] ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              SizedBox(height: 10),
+              Text('Beschrijving: ${widget.book['description'] ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              SizedBox(height: 10),
+              Text('Pagina\'s: ${widget.book['pages']?.toString() ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              SizedBox(height: 10),
+              Text('Hoeveelheid: ${widget.book['quantity']?.toString() ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              SizedBox(height: 10),
+              Text('Beschikbaarheid: $availability', style: TextStyle(fontSize: 16)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: () => _updateAvailability(availability > 0 ? availability - 1 : 0),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => _updateAvailability(availability < (widget.book['quantity'] ?? 0) ? availability + 1 : availability),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
