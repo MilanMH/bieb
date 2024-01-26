@@ -73,7 +73,7 @@ class _ScannerPageState extends State<ScannerPage> {
   String _bookAuthor = '';
   String _bookDescription = '';
   String _bookPages = '';
-  String _bookQuantity = '';
+  String _bookQuantity = '1';
   File? _image;
 
   Future<void> scanBarcodeNormal() async {
@@ -187,6 +187,7 @@ class _ScannerPageState extends State<ScannerPage> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
+                controller: TextEditingController(text: _bookQuantity),
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Aantal',
@@ -434,7 +435,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final String imageUrl = ipurl + '/' + (widget.book['image_path'] ?? '').replaceAll('uploads/', '');
+    final String imageUrl = ipurl + '/uploads/' + (widget.book['image_path'] ?? '');
 
     return Scaffold(
       appBar: AppBar(
