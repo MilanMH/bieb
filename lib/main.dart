@@ -16,6 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Book Scanner',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const MainPage(),
@@ -257,6 +258,17 @@ class _BooksListPageState extends State<BooksListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Boekenlijst'),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: BookSearchDelegate(_books),
+              );
+            },
+          ),
+        ],
       ),
       body: ListView.builder(
         itemCount: _books.length,
