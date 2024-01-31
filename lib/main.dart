@@ -217,7 +217,7 @@ class _ScannerPageState extends State<ScannerPage> {
 }
 
 class BooksListPage extends StatefulWidget {
-  const BooksListPage({super.key});
+  const BooksListPage({Key? key}) : super(key: key);
 
   @override
   _BooksListPageState createState() => _BooksListPageState();
@@ -233,7 +233,7 @@ class _BooksListPageState extends State<BooksListPage> {
   }
 
   Future<void> fetchBooks() async {
-    final url = Uri.parse(ipurl + '/get_books');
+    final url = Uri.parse('$ipurl/get_books');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -241,14 +241,14 @@ class _BooksListPageState extends State<BooksListPage> {
           _books = json.decode(response.body);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Failed to fetch books"),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to fetch books")),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Exception: $e"),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Exception: $e")),
+      );
     }
   }
 
@@ -257,30 +257,33 @@ class _BooksListPageState extends State<BooksListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Boekenlijst'),
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: BookSearchDelegate(_books),
-              );
-            },
-          ),
-        ],
       ),
       body: ListView.builder(
         itemCount: _books.length,
         itemBuilder: (context, index) {
+          var book = _books[index];
+          var imagePath = book['image_path'] != null ? '$ipurl/${book['image_path'].split('/').last}' : null;
+
           return ListTile(
-            title: Text(_books[index]['title']),
-            subtitle: Text(_books[index]['author']),
-            trailing: Text(_books[index]['isbn']),
+            leading: imagePath != null
+                ? Image.network(
+              imagePath,
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.image, size: 50);
+              },
+            )
+                : const Icon(Icons.image, size: 50),
+            title: Text(book['title'] ?? 'No Title'),
+            subtitle: Text(book['author'] ?? 'Unknown Author'),
+            trailing: Text(book['isbn'] ?? 'No ISBN'),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BookDetailsPage(book: _books[index]),
+                  builder: (context) => BookDetailsPage(book: book),
                 ),
               );
             },
@@ -393,9 +396,11 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
       setState(() {
         availability = newAvailability;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Beschikbaarheid bijgewerkt')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Beschikbaarheid bijgewerkt')));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fout bij het bijwerken van de beschikbaarheid')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Fout bij het bijwerken van de beschikbaarheid')));
     }
   }
 
@@ -405,7 +410,8 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Boek verwijderen'),
-          content: const Text('Weet je zeker dat je dit boek wilt verwijderen?'),
+          content: const Text(
+              'Weet je zeker dat je dit boek wilt verwijderen?'),
           actions: <Widget>[
             TextButton(
               child: const Text('Annuleren'),
@@ -425,17 +431,26 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
       final response = await http.delete(url);
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Boek succesvol verwijderd')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Boek succesvol verwijderd')));
         Navigator.of(context).pop(); // Ga terug naar de vorige pagina
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fout bij het verwijderen van het boek')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fout bij het verwijderen van het boek')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final String imageUrl = ipurl + '/uploads/' + (widget.book['image_path'] ?? '');
+    var imagePath = widget.book['image_path'] != null ? '$ipurl/${widget
+        .book['image_path']
+        .split('/')
+        .last}' : null;
+
+// Voeg de juiste URL toe
+    final String imageUrl = '$imagePath';
+
 
     return Scaffold(
       appBar: AppBar(
@@ -453,33 +468,50 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, fit: BoxFit.cover)
-                  : Placeholder(fallbackHeight: 200.0),
+              Container(
+                width: 150.0, // Breedte van de afbeelding
+                height: 200.0, // Hoogte van de afbeelding
+                child: imageUrl.isNotEmpty
+                    ? Image.network(imageUrl, fit: BoxFit.cover)
+                    : Placeholder(fallbackHeight: 200.0),
+              ),
               SizedBox(height: 20),
-              Text('ISBN: ${widget.book['isbn'] ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              Text('ISBN: ${widget.book['isbn'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 16)),
               SizedBox(height: 10),
-              Text('Titel: ${widget.book['title'] ?? 'N/A'}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text('Titel: ${widget.book['title'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               SizedBox(height: 10),
-              Text('Auteur: ${widget.book['author'] ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              Text('Auteur: ${widget.book['author'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 16)),
               SizedBox(height: 10),
-              Text('Beschrijving: ${widget.book['description'] ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              Text('Beschrijving: ${widget.book['description'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 16)),
               SizedBox(height: 10),
-              Text('Pagina\'s: ${widget.book['pages']?.toString() ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              Text('Pagina\'s: ${widget.book['pages']?.toString() ?? 'N/A'}',
+                  style: TextStyle(fontSize: 16)),
               SizedBox(height: 10),
-              Text('Hoeveelheid: ${widget.book['quantity']?.toString() ?? 'N/A'}', style: TextStyle(fontSize: 16)),
+              Text('Hoeveelheid: ${widget.book['quantity']?.toString() ??
+                  'N/A'}', style: TextStyle(fontSize: 16)),
               SizedBox(height: 10),
-              Text('Beschikbaarheid: $availability', style: TextStyle(fontSize: 16)),
+              Text('Beschikbaarheid: $availability',
+                  style: TextStyle(fontSize: 16)),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   IconButton(
                     icon: const Icon(Icons.remove),
-                    onPressed: () => _updateAvailability(availability > 0 ? availability - 1 : 0),
+                    onPressed: () =>
+                        _updateAvailability(
+                            availability > 0 ? availability - 1 : 0),
                   ),
                   IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () => _updateAvailability(availability < (widget.book['quantity'] ?? 0) ? availability + 1 : availability),
+                    onPressed: () =>
+                        _updateAvailability(
+                            availability < (widget.book['quantity'] ?? 0)
+                                ? availability + 1
+                                : availability),
                   ),
                 ],
               ),
