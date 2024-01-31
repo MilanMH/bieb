@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 
-const ipurl = 'http://10.0.0.193:3000';
+const ipurl = 'http://10.0.1.68:3000';
 
 void main() => runApp(const MyApp());
 
@@ -168,6 +168,8 @@ class _ScannerPageState extends State<ScannerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Barcode Scanner'),
+        backgroundColor: const Color(0xFF664E9F),
+        foregroundColor: Colors.white,
       ),
       body: Center(
         child: Column(
