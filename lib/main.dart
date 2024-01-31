@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 
-const ipurl = 'http://10.0.0.193:3000';
+const ipurl = 'http://10.0.1.68:3000';
 
 void main() => runApp(const MyApp());
 
@@ -169,24 +169,52 @@ class _ScannerPageState extends State<ScannerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Barcode Scanner'),
+        backgroundColor: const Color(0xFF664E9F),
+        foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text('Scan result: $_scanBarcode\n', style: Theme.of(context).textTheme.headline6),
-            Text('Title: $_bookTitle\n', style: Theme.of(context).textTheme.headline6),
-            Text('Author: $_bookAuthor\n', style: Theme.of(context).textTheme.bodyText2),
-            Text('Description: $_bookDescription\n', style: Theme.of(context).textTheme.bodyText2),
-            Text('Pages: $_bookPages\n', style: Theme.of(context).textTheme.bodyText2),
-            if (_image != null)
-              Container(
-                width: 100.0,  // Breedte van de afbeelding
-                height: 150.0, // Hoogte van de afbeelding
-                child: Image.file(_image!, fit: BoxFit.cover),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
+          crossAxisAlignment: CrossAxisAlignment.center, // Center items horizontally
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(left: 16,),
+              child: Text('Scan result: $_scanBarcode\n',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.left),
+            ),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(left: 16),
+              child: Text('Title: $_bookTitle\n',
+                  style: const TextStyle(fontSize: 15),
+                  textAlign: TextAlign.left),
+            ),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(left: 16),
+              child: Text('Author: $_bookAuthor\n',
+                  style: const TextStyle(fontSize: 15),
+                  textAlign: TextAlign.left),
+            ),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(left: 16),
+              child: Text('Amount of pages:$_bookPages\n',
+                  style: const TextStyle(fontSize: 15),
+                  textAlign: TextAlign.left),
+            ),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(left: 16),
+              child: Text('Description: $_bookDescription\n',
+                  style: const TextStyle(fontSize: 15),
+                  textAlign: TextAlign.left),
+            ),
+            SizedBox(
+              width: 200,
               child: TextField(
                 controller: TextEditingController(text: _bookQuantity),
                 decoration: const InputDecoration(
@@ -199,19 +227,43 @@ class _ScannerPageState extends State<ScannerPage> {
                 },
               ),
             ),
-            ElevatedButton(
-              onPressed: _scanBarcode != 'Unknown' && _bookQuantity.isNotEmpty
-                  ? addBookToDatabase
-                  : null,
-              child: const Text('Add Book to Database'),
+            Padding(
+              padding: const EdgeInsets.only(top: 10.0),
+              child: ElevatedButton(
+                onPressed: _scanBarcode != 'Unknown' && _bookQuantity.isNotEmpty
+                    ? addBookToDatabase
+                    : null,
+                child: const Text('Add Book to Database'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SizedBox(
+                height: 130,
+                width: 130,
+                child: ElevatedButton(
+                  onPressed: scanBarcodeNormal,
+                  style: ElevatedButton.styleFrom(
+                    primary: const Color(0xFFEBDDFF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 130,
+                        width: 130,
+                        child: Image.asset('assets/barcode.png'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: scanBarcodeNormal,
-        tooltip: 'Scan',
-        child: const Icon(Icons.camera_alt),
       ),
     );
   }
@@ -258,6 +310,9 @@ class _BooksListPageState extends State<BooksListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Boekenlijst'),
+        backgroundColor: const Color(0xFF664E9F),
+        foregroundColor: Colors.white,
+        centerTitle: true,
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.search),
